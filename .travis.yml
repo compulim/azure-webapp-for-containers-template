@@ -12,12 +12,13 @@ before_install:
 - sudo apt-get install apt-transport-https
 - sudo apt-get update && sudo apt-get install azure-cli
 
-install: ""
-script:
+install:
 - export DOCKER_FULL_IMAGE_NAME=$ACR_NAME.azurecr.io/$DOCKER_IMAGE_NAME:$TRAVIS_COMMIT
 - docker build -t $DOCKER_FULL_IMAGE_NAME .
+
+script:
 - docker run -d --name test-image -p 80:80 --rm $DOCKER_FULL_IMAGE_NAME
-- sleep 2
+- sleep 2 # We need to sleep 2 seconds because the web server did not listen yet
 - curl -f --retry 10 --retry-max-time 30 -vv http://localhost/health.txt
 - docker stop test-image
 
