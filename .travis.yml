@@ -13,7 +13,12 @@ before_install:
 - sudo apt-get update && sudo apt-get install azure-cli
 
 install: ""
-script: docker build -t $ACR_NAME.azurecr.io/$DOCKER_IMAGE_NAME:$TRAVIS_COMMIT .
+script:
+- DOCKER_FULL_IMAGE_NAME=$ACR_NAME.azurecr.io/$DOCKER_IMAGE_NAME:$TRAVIS_COMMIT
+- docker build -t DOCKER_FULL_IMAGE_NAME .
+- docker run --rm -p 80:80 DOCKER_FULL_IMAGE_NAME
+- curl -f -vv http://localhost/health.txt
+- docker stop DOCKER_FULL_IMAGE_NAME
 
 deploy:
   provider: script
