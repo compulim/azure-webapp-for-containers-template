@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Environment variables required:
+#   ACR_NAME=myacr
+#   AZURE_SPN_PASSWORD=<password>
+#   AZURE_SPN_TENANT=mycompany.onmicrosoft.com
+#   AZURE_SPN_USERNAME=myspn
+#   AZURE_WEBAPP_NAME=mywebapp
+#   AZURE_WEBAPP_RESOURCE_GROUP=mywebapp-rg
+#   CONTAINER_NAME=mywebapp
+
+# Log into Azure
+az login --service-principal --username $AZURE_SPN_USERNAME --password $AZURE_SPN_PASSWORD --tenant $AZURE_SPN_TENANT
+
+# Docker log into Azure Container Registry
+az acr login --name $ACR_NAME
+
+# Push container Azure Container Registry
+docker push $ACR_NAME.azurecr.io/$CONTAINER_NAME:$TRAVIS_COMMIT
+
+# Obtain Docker credentials from Azure Container Registry
+ACR_PASSWORD=`az acr credential show --name $ACR_NAME | jq -r '.passwords[0].value'`
+ACR_USERNAME=`az acr credential show --name $ACR_NAME | jq -r '.username'`
+
+# Deploy the container to Azure Web App
+az webapp config container set --docker-custom-image-name $ACR_NAME.azurecr.io/$CONTAINER_NAME:$TRAVIS_COMMIT --docker-registry-server-password $ACR_PASSWORD --docker-registry-server-url https://$ACR_NAME.azurecr.io --docker-registry-server-user $ACR_USERNAME --name $AZURE_WEBAPP_NAME --resource-group $AZURE_WEBAPP_RESOURCE_GROUP
