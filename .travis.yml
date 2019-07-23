@@ -13,7 +13,7 @@ before_install:
 - sudo apt-get update && sudo apt-get install azure-cli
 
 install: ""
-script: docker build -t $ACR_NAME.azurecr.io/$CONTAINER_NAME:$TRAVIS_COMMIT .
+script: docker build -t $ACR_NAME.azurecr.io/$DOCKER_IMAGE_NAME:$TRAVIS_COMMIT .
 
 deploy:
   provider: script
