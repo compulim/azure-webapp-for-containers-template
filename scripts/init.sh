@@ -4,6 +4,6 @@
 sed -i "s/SSH_PORT/$SSH_PORT/g" /etc/ssh/sshd_config
 service ssh start
 
-# Start both bot server and web server
+# Start package
 cd /var/web/
 npm start

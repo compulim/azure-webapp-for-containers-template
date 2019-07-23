@@ -16,8 +16,10 @@
    - In "Role", select "Contributor"
    - In "Select", type "webapptemplate"
    - Click "Save"
+1. Configure Travis CI and set environment variables
+   - Refer to the section [Travis CI environment variables](#travis-ci-environment-variables)
 
-Travis CI environment variables:
+## Travis CI environment variables
 
 | Name | Description | Secured |
 | - | - | - |

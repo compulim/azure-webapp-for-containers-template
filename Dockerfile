@@ -14,8 +14,8 @@ RUN \
   && apt-get update \
   && apt-get install -y --no-install-recommends openssh-server \
   && echo "$SSH_PASSWD" | chpasswd \
-  && mv /var/bot/sshd_config /etc/ssh/ \
-  && mv /var/bot/init.sh /usr/local/bin/ \
+  && mv /var/web/scripts/sshd_config /etc/ssh/ \
+  && mv /var/web/scripts/init.sh /usr/local/bin/ \
   && chmod u+x /usr/local/bin/init.sh
 
 WORKDIR /var/web/
