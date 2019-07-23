@@ -2,15 +2,15 @@
 
 # Environment variables required:
 #   ACR_NAME=myacr
-#   AZURE_SPN_PASSWORD=<password>
-#   AZURE_SPN_TENANT=mycompany.onmicrosoft.com
-#   AZURE_SPN_USERNAME=myspn
+#   AZURE_SP_PASSWORD=<password>
+#   AZURE_SP_TENANT=mycompany.onmicrosoft.com
+#   AZURE_SP_USERNAME=myspn
 #   AZURE_WEBAPP_NAME=mywebapp
 #   AZURE_WEBAPP_RESOURCE_GROUP=mywebapp-rg
 #   CONTAINER_NAME=mywebapp
 
 # Log into Azure
-az login --service-principal --username $AZURE_SPN_USERNAME --password $AZURE_SPN_PASSWORD --tenant $AZURE_SPN_TENANT
+az login --service-principal --username $AZURE_SP_USERNAME --password $AZURE_SP_PASSWORD --tenant $AZURE_SP_TENANT
 
 # Docker log into Azure Container Registry
 az acr login --name $ACR_NAME
