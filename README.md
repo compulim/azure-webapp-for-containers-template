@@ -15,9 +15,111 @@ We assume you have hands-on experience on these key technologies:
 
 You can extend this template to use Docker Compose or Kubernetes on Azure Web App for Containers.
 
-The simple web server used in this template is [`serve`](https://www.npmjs.com/package/serve) from NPM. You can modify `Dockerfile` to change to another language or hosting server.
+This template will enable SSH access to the Docker image via Azure Web App (a.k.a. SCM or Kudu). The secure tunneling service is provided by Azure.
 
-This template enables SSH access to the Docker image via Azure Web App (a.k.a. SCM or Kudu). It is a secure service provided by Azure.
+## Setup
+
+### GitHub and Travis CI
+
+1. Create a new GitHub repository based on this template
+1. Enable Travis CI on the GitHub repository
+   - Set environment variable `DOCKER_IMAGE_NAME` to `myapp-image`
+
+### Microsoft Azure
+
+There are multiple resources needed to create and configure.
+
+- [Create resource group](#create-resource-group)
+- [Create Azure Container Registry](#create-azure-container-registry)
+- [Create App Service Plan for Linux](#create-app-service-plan-for-linux)
+- [Create Azure Web App for Containers](#create-azure-web-app-for-containers)
+- [Create service principal](#create-service-principal)
+
+#### Create resource group
+
+Resource group groups all resources in a single place. We will walk you through one-by-one:
+
+```sh
+az group create \
+  --location "West US" \
+  --name myapp-rg
+```
+
+#### Create Azure Container Registry
+
+Azure Container Registry keeps your Docker images.
+
+```sh
+az acr create \
+  --resource-group myapp-rg \
+  --name myapp-acr \
+  --admin-enabled \
+  --location "West US" \
+  --sku Basic
+```
+
+> `--admin-enabled` turns on password-based access, which is required for Azure Web App.
+
+After the registry is created, copy the name of the registry to Travis CI as environment variable named `ACR_NAME`.
+
+Also, save the `id` value. We will use it in "[Create service principal](#create-service-principal)" step.
+
+#### Create App Service Plan for Linux
+
+App Service Plan is the computational resources for your web app.
+
+```sh
+az appservice plan create \
+  --resource-group myapp-rg
+  --name myapp-plan \
+  --is-linux \
+  --location "West US" \
+  --sku B1
+```
+
+#### Create Azure Web App for Containers
+
+Web App is a website hosted under the App Service Plan. One App Service Plan can host multiple Web App.
+
+```sh
+az webapp create \
+  --resource-group myapp-rg \
+  --name myapp \
+  --plan myapp-plan \
+  --deployment-container-image-name nginx
+```
+
+> Note: We will temporarily deploying NGINX image before our CI/CD pipeline is up.
+
+After Azure Web App is created:
+
+1. Copy the name of the web app to Travis CI as environment variable named `AZURE_WEBAPP_NAME`
+1. Copy the resource group of the web app to Travis CI as environment variable named `AZURE_WEBAPP_RESOURCE_GROUP`
+
+Also, save the `id` value. We will use it in "[Create service principal](#create-service-principal)" step.
+
+#### Create service principal
+
+Service principal is the service account to access your resources. We will grant "Contributor" role to both Azure Container Registry and Azure Web App.
+
+> You will need to replace `scopes` with the `id` values from Azure Container Registry and Azure Web App.
+
+```sh
+az ad sp create-for-rbac \
+  --role Contributor \
+  --scopes \
+    /subscriptions/c78c4c01-dfcf-41b9-b6be-c57cb9e789d7/resourceGroups/apptemplate-rg/providers/Microsoft.ContainerRegistry/registries/apptemplateacr \
+    /subscriptions/c78c4c01-dfcf-41b9-b6be-c57cb9e789d7/resourceGroups/apptemplate-rg/providers/Microsoft.Web/sites/apptemplateapp
+```
+
+After service principal is created, copy these values to Travis CI environment variables
+   - Value of `appId` should copy to `AZURE_SP_USERNAME`
+   - Value of `password` should copy to `AZURE_SP_PASSWORD`
+   - Value of `tenant` should copy to `AZURE_SP_TENANT`
+
+### Kick off the build
+
+Go to Travis CI of your repository, and then click "Trigger build". In about 2-3 minutes, you should see your website up and running.
 
 ## How it works
 
@@ -47,46 +149,36 @@ This template enables SSH access to the Docker image via Azure Web App (a.k.a. S
    - Azure Web App for Containers for hosting Docker image
        - No webhook is required because we explicitly set the Docker image name on every continuous deployment
 
-## Setup steps
-
-1. Azure
-   1. Create resource group to hold all your resources
-      - `az group create --location "West US" --name myapp-rg`
-   1. Create Azure Container Registry
-      - `az acr create --name myapp-acr --resource-group myapp-rg --sku Basic --admin-enabled --location "West US"`
-   1. Create Service Principal
-      - `az ad sp create-for-rbac --name http://myapp-sp`
-      - https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli?view=azure-cli-latest#create-a-service-principal
-      - Remember to write down the password
-   1. Create Azure Web App for Containers
-      - https://ms.portal.azure.com/#create/Microsoft.AppSvcLinux
-      - For container settings, please use default values (Nginx in single image), we will override them in our Travis CI deployment script
-   1. Configure Service Principal in Azure Web App
-      - Select "Access Control (IAM)"
-      - Click "+ Add" and then "Add role assignment"
-      - In "Role", select "Contributor"
-      - In "Select", type "http://myapp-sp"
-      - Click "Save"
-1. Travis CI
-   1. Configure Travis CI and set environment variables
-      - Please refer to the section [Travis CI environment variables](#travis-ci-environment-variables)
+## Frequently asked questions
 
 ### Travis CI environment variables
 
-In order to deploy to Azure, you will need to set up the following environment variables in your Travis CI project settings page.
+You should have the following environment variables set in Travis CI:
 
-| Name                          | Description                       | Secured | Sample value                |
-|-------------------------------|-----------------------------------|---------|-----------------------------|
-| `ACR_NAME`                    | Azure Container Registry name     | No      | `myapp-acr`                 |
-| `AZURE_SP_PASSWORD`           | Service principal password        | Yes     |                             |
-| `AZURE_SP_TENANT`             | Service principal tenant ID       | Yes     | `mycompany.onmicrosoft.com` |
-| `AZURE_SP_USERNAME`           | Service principal username        | Yes     | `http://myapp-sp`           |
-| `AZURE_WEBAPP_NAME`           | Azure Web App name                | No      | `myapp-web`                 |
-| `AZURE_WEBAPP_RESOURCE_GROUP` | Azure Web App resource group name | No      | `myapp-rg`                  |
-| `DOCKER_IMAGE_NAME`           | Docker image name                 | No      | `myapp-image`               |
+| Name                          | Description                       | Secured | Sample value                                   |
+|-------------------------------|-----------------------------------|---------|------------------------------------------------|
+| `ACR_NAME`                    | Azure Container Registry name     | No      | `myapp-acr`                                    |
+| `AZURE_SP_PASSWORD`           | Service principal password        | Yes     |                                                |
+| `AZURE_SP_TENANT`             | Service principal tenant ID       | Yes     | GUID or `mycompany.onmicrosoft.com`            |
+| `AZURE_SP_USERNAME`           | Service principal username        | Yes     | GUID or `http://azure-cli-2019-01-01-12-34-56` |
+| `AZURE_WEBAPP_NAME`           | Azure Web App name                | No      | `myapp-web`                                    |
+| `AZURE_WEBAPP_RESOURCE_GROUP` | Azure Web App resource group name | No      | `myapp-rg`                                     |
+| `DOCKER_IMAGE_NAME`           | Docker image name                 | No      | `myapp-image`                                  |
 
-## Diagnostics
+### Diagnosing deployment issues
 
-- Log stream at https://myapp-web.scm.azurewebsites.net/api/logstream
-- SSH access at https://myapp-web.scm.azurewebsites.net/webssh/host
-- Kudu at https://myapp-web.scm.azurewebsites.net/
+- For deployment log stream, https://myapp-web.scm.azurewebsites.net/api/logstream
+- For SSH access into the Docker container, https://myapp-web.scm.azurewebsites.net/webssh/host
+
+### How to rollback to previous image?
+
+Rollback is easy. We use Git commit when versioning Docker images. You will need to find out the commit you want to rollback to:
+
+```sh
+az webapp config container set \
+   --resource-group myapp-rg \
+   --name myapp-web \
+   --docker-custom-image-name myapp-acr.azurecr.io/myapp-image:a1b2c3d4e5f6
+```
+
+> Note: Git commit must be in long format.
