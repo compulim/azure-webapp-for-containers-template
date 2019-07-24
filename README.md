@@ -4,8 +4,8 @@ This repository is a template for setting up a simple web server on Azure Web Ap
 
 We assume you have hands-on experience on these key technologies:
 
-- Azure
-   - AZ CLI
+- Microsoft Azure
+   - Azure CLI
    - Azure Container Registry
    - Azure Web Apps
    - Service Principal
@@ -34,6 +34,8 @@ There are multiple resources needed to create and configure.
 - [Create App Service Plan for Linux](#create-app-service-plan-for-linux)
 - [Create Azure Web App for Containers](#create-azure-web-app-for-containers)
 - [Create service principal](#create-service-principal)
+
+In this article, we will cover the setup using [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest).
 
 #### Create resource group
 
@@ -85,8 +87,8 @@ Web App is a website hosted under the App Service Plan. One App Service Plan can
 az webapp create \
   --resource-group myapp-rg \
   --name myapp \
-  --plan myapp-plan \
-  --deployment-container-image-name nginx
+  --deployment-container-image-name nginx \
+  --plan myapp-plan
 ```
 
 > Note: We will temporarily deploying NGINX image before our CI/CD pipeline is up.
