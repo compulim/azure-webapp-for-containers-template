@@ -113,9 +113,9 @@ az ad sp create-for-rbac \
 ```
 
 After service principal is created, copy these values to Travis CI environment variables
-   - Value of `appId` should copy to `AZURE_SP_USERNAME`
-   - Value of `password` should copy to `AZURE_SP_PASSWORD`
-   - Value of `tenant` should copy to `AZURE_SP_TENANT`
+   - Value of `appId` should be copied to `AZURE_SP_USERNAME`
+   - Value of `password` should be copied to `AZURE_SP_PASSWORD`
+   - Value of `tenant` should be copied to `AZURE_SP_TENANT`
 
 ### Kick off the build
 
