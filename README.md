@@ -41,8 +41,8 @@ Resource group groups all resources in a single place. We will walk you through 
 
 ```sh
 az group create \
-  --location "West US" \
-  --name myapp-rg
+  --name myapp-rg \
+  --location "West US"
 ```
 
 #### Create Azure Container Registry
