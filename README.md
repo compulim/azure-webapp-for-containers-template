@@ -100,7 +100,7 @@ Also, save the `id` value. We will use it in "[Create service principal](#create
 
 #### Create service principal
 
-Service principal is the service account to access your resources. We will grant "Contributor" role to both Azure Container Registry and Azure Web App.
+Service principal is the service account to access your resources. We will grant "Contributor" role to both Azure Container Registry (for reading admin password) and Azure Web App (for deployment).
 
 > You will need to replace `scopes` with the `id` values from Azure Container Registry and Azure Web App.
 
@@ -108,8 +108,8 @@ Service principal is the service account to access your resources. We will grant
 az ad sp create-for-rbac \
   --role Contributor \
   --scopes \
-    /subscriptions/c78c4c01-dfcf-41b9-b6be-c57cb9e789d7/resourceGroups/apptemplate-rg/providers/Microsoft.ContainerRegistry/registries/apptemplateacr \
-    /subscriptions/c78c4c01-dfcf-41b9-b6be-c57cb9e789d7/resourceGroups/apptemplate-rg/providers/Microsoft.Web/sites/apptemplateapp
+    /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/apptemplate-rg/providers/Microsoft.ContainerRegistry/registries/apptemplateacr \
+    /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/apptemplate-rg/providers/Microsoft.Web/sites/apptemplateapp
 ```
 
 After service principal is created, copy these values to Travis CI environment variables
