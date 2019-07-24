@@ -13,8 +13,6 @@ We assume you have hands-on experience on these key technologies:
 - GitHub
 - Travis CI
 
-You can extend this template to use Docker Compose or Kubernetes on Azure Web App for Containers.
-
 This template will enable SSH access to the Docker image via Azure Web App (a.k.a. SCM or Kudu). The secure tunneling service is provided by Azure.
 
 ## Setup
