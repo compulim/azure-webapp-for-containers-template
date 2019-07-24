@@ -176,9 +176,9 @@ Rollback is easy. We use Git commit when versioning Docker images. You will need
 
 ```sh
 az webapp config container set \
-   --resource-group myapp-rg \
-   --name myapp-web \
-   --docker-custom-image-name myapp-acr.azurecr.io/myapp-image:a1b2c3d4e5f6
+  --resource-group myapp-rg \
+  --name myapp-web \
+  --docker-custom-image-name myapp-acr.azurecr.io/myapp-image:a1b2c3d4e5f6
 ```
 
 > Note: Git commit must be in long format.
