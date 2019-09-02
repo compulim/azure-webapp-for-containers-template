@@ -15,13 +15,11 @@ We assume you have some experiences or understandings on these key technologies:
 
 ## Why this template?
 
-If you have hands-on experience on the technologies above, you are probably doing something very similar to the steps we outlined here.
-
-This tutorial will save you time for building the CI/CD scripts.
+If you have hands-on experience on the technologies above, you are probably doing something very similar to the steps we outlined here. This tutorial will save you time for building the CI/CD scripts.
 
 The CI/CD scripts outline here do not use Azure Container Registry webhooks feature, which would save you some costs and time testing it.
 
-Although this tutorial focus on Node.js, we are using it as a simple static web server. You are not required to run your app on Node.js stack.
+Although this tutorial focus on Node.js, we are using it as a simple static web server. You are not required to run your app on Node.js base image.
 
 ## Setup
 
@@ -30,7 +28,7 @@ Although this tutorial focus on Node.js, we are using it as a simple static web 
 1. Create a new GitHub repository based on this template
 1. Enable Travis CI on the GitHub repository
    - Set environment variable `DOCKER_IMAGE_NAME` to `myapp-image`
-   - Travis CI will also help you to verify the pull request
+   - Travis CI will also help you to test the pull request
 
 ### Microsoft Azure
 
@@ -95,7 +93,7 @@ Web App is a website hosted under the App Service Plan. One App Service Plan can
 ```sh
 az webapp create \
   --resource-group myapp-rg \
-  --name myapp \
+  --name myapp-web \
   --deployment-container-image-name nginx \
   --plan myapp-plan
 ```
@@ -104,13 +102,13 @@ az webapp create \
 
 After Azure Web App is created:
 
-1. Verify it is running at https://myapp.azurewebsites.net/
+1. Verify it is running at https://myapp-web.azurewebsites.net/
 1. Copy the name of the web app to Travis CI as environment variable named `AZURE_WEBAPP_NAME`
 1. Copy the resource group of the web app to Travis CI as environment variable named `AZURE_WEBAPP_RESOURCE_GROUP`
 
 Also, save the `id` value. We will use it in "[Create service principal](#create-service-principal)" step.
 
-> If you lost the `id` value, you can run `az webapp show --resource-group myapp-rg --name myapp --query id --output tsv`.
+> If you lost the `id` value, you can run `az webapp show --resource-group myapp-rg --name myapp-web --query id --output tsv`.
 
 #### Create service principal
 
@@ -119,7 +117,7 @@ Service principal is the service account to access your resources, a.k.a. servic
 > We found it is more stable to create service principal without assignments first, then assign role to it.
 
 ```sh
-az ad sp create-for-rbac --name https://myapp --skip-assignment
+az ad sp create-for-rbac --name https://myapp-web --skip-assignment
 ```
 
 You should see the result similar to below.
@@ -128,7 +126,7 @@ You should see the result similar to below.
 {
   "appId": "12345678-1234-5678-abcd-12345678abcd",
   "displayName": "azure-cli-2018-12-25-12-34-56",
-  "name": "https://myapp",
+  "name": "https://myapp-web",
   "password": "12345678-1234-5678-abcd-12345678abcd",
   "tenant": "12345678-1234-5678-abcd-12345678abcd"
 }
@@ -151,12 +149,12 @@ az role assignment create \
 az role assignment create \
   --assignee 12345678-1234-5678-abcd-12345678abcd \
   --role Contributor \
-  --scope /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/myapp-rg/providers/Microsoft.Web/sites/myapp
+  --scope /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/myapp-rg/providers/Microsoft.Web/sites/myapp-web
 ```
 
 ### Kick off the build
 
-Go to Travis CI of your repository, and then click "Trigger build". In about 2-3 minutes, you should see your website up and running.
+Go to Travis CI of your repository, and then click "Trigger build". In about 2-3 minutes, you should see your website up and running at https://myapp-web.azurewebsites.net/.
 
 ## How the CI/CD scripts works
 
@@ -173,7 +171,7 @@ Go to Travis CI of your repository, and then click "Trigger build". In about 2-3
       1. Run the image and host on port 80
       1. Ping http://localhost/health.txt
       1. Stop the image
-   1. Tag the image like `myappacr.azurecr.io/myapp:a1b2c3d`
+   1. Tag the image like `myappacr.azurecr.io/myapp-image:a1b2c3d`
 1. Deployment phase
    1. Note: deployment will only kickoff if it is a commit on `master` branch
    1. Run `scripts/docker_push`
@@ -258,12 +256,13 @@ For React, we will separate the build and run by using multi-stage build. You ca
 > The `Dockerfile` below assumes the build script for React is `npm run build` and output is located under `/build/` folder.
 
 ```diff
-+ FROM node:12 as builder
++ FROM node:12 AS builder
 +
-+ ADD src /var/build/
-+ ADD package*.json /var/build/
++ ADD src /var/builder/src/
++ ADD public /var/builder/public/
++ ADD package*.json /var/builder/
 +
-+ WORKDIR /var/build/
++ WORKDIR /var/builder/
 + RUN \
 +   npm ci \
 +   && npm run build
@@ -289,7 +288,7 @@ For React, we will separate the build and run by using multi-stage build. You ca
 
   ADD scripts/sshd_config /etc/ssh/
 - ADD public /var/web/public/
-+ COPY --from=builder /var/build/build/ /var/web/
++ COPY --from=builder /var/builder/build/ /var/web/
 
   WORKDIR /var/web/
   RUN npm install -g serve@11.1.0
@@ -299,6 +298,9 @@ For React, we will separate the build and run by using multi-stage build. You ca
 ```
 
 ## Related articles
+
+- [Run a custom Linux container in Azure App Service]
+- [Tutorial: Build a custom image and run in App Service from a private registry]
 
 [Run a custom Linux container in Azure App Service]: https://docs.microsoft.com/en-us/azure/app-service/containers/quickstart-docker-go
 [Tutorial: Build a custom image and run in App Service from a private registry]: https://docs.microsoft.com/en-us/azure/app-service/containers/tutorial-custom-docker-image
