@@ -244,7 +244,7 @@ You should have the following environment variables set in Travis CI:
 
 ### Why enabling SSH? Is it secure?
 
-Enable SSH allows developers to easily diagnose issues inside the container.
+Enabling SSH allows developers to easily diagnose issues inside the container.
 
 Although port 2222 is exposed as SSH server, this port is secured by Azure and is not publicly accessible. If you need to access the box through SSH, you will first need to be authenticated on Azure.
 
