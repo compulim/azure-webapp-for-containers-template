@@ -162,32 +162,44 @@ az role assignment create \
 
 ### Kick off the build
 
-Go to Travis CI of your repository, and then click "Trigger build". In about 2-3 minutes, you should see your website up and running at https://myapp-web.azurewebsites.net/.
+For the first time, you will need to kick off the build manually.
+
+Go to Travis CI of your repository, and then click "Trigger build". In about 2-3 minutes, you should see your website up and running at https://myapp-web.azurewebsites.net/. It should read "Hello, World!".
+
+Subsequent builds and deploys will be kicked off automatically when a new commit is pushed to the GitHub repository.
 
 ## How the CI/CD scripts works
 
-1. Build phase
-   1. Install AZ CLI
-   1. Build the `Dockerfile`
-      1. Expose port 80 and 2222 (SSH)
-      1. Copy production files to `/var/web/`
-      1. Set up SSH according to steps from this [article on docs.microsoft.com](https://docs.microsoft.com/en-us/azure/app-service/containers/tutorial-custom-docker-image#enable-ssh-connections)
-      1. Set up working directory at `/var/web/`
-      1. Run `npm ci`
-      1. Set up entrypoint to `init.sh`
-   1. Test the image
-      1. Run the image and host on port 80
-      1. Ping http://localhost/health.txt
-      1. Stop the image
-   1. Tag the image like `myappacr.azurecr.io/myapp-image:a1b2c3d`
-1. Deployment phase
-   1. Note: deployment will only kickoff if it is a commit on `master` branch
-   1. Run `scripts/docker_push`
-      1. Login Azure by using Service Principal
-      1. Login Azure Container Registry (setup auth for Docker)
-      1. Push image to Azure Container Registry
-      1. Set Azure Web App to use the latest image
-         - Instead of using pricey Azure Container Registry webhooks, we prefer setting up the container directly using AZ CLI
+Travis CI use a single file `.travis.yml` to control both CI and CD phases.
+
+### Continuous integration phase
+
+Continuous integration will run when a new commit is pushed or pull request is submitted to the repository.
+
+1. Install AZ CLI
+1. Build the `Dockerfile`
+   1. Expose port 80 and 2222 (SSH)
+   1. Copy production files to `/var/web/`
+   1. Set up SSH according to steps from this [article on docs.microsoft.com](https://docs.microsoft.com/en-us/azure/app-service/containers/tutorial-custom-docker-image#enable-ssh-connections)
+   1. Set up working directory at `/var/web/`
+   1. Run `npm ci`
+   1. Set up entrypoint to `init.sh`
+1. Test the image
+   1. Run the image and host on port 80
+   1. Ping http://localhost/health.txt
+   1. Stop the image
+1. Tag the image like `myappacr.azurecr.io/myapp-image:a1b2c3d`
+
+### Continuous deployment phase
+
+Continuous deployment will only start when a new commit is pushed to `master` branch.
+
+1. Run `scripts/docker_push`
+   1. Login Azure by using Service Principal
+   1. Login Azure Container Registry (setup auth for Docker)
+   1. Push image to Azure Container Registry
+   1. Set Azure Web App to use the latest image
+      - Instead of using pricey Azure Container Registry webhooks, we prefer setting up the container directly using AZ CLI
 
 ## Cleaning up
 
