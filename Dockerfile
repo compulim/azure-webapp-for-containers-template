@@ -1,7 +1,8 @@
 FROM node:12
 
 EXPOSE 80 2222
-ADD . /var/web/
+
+ADD scripts/init.sh /usr/local/bin/
 
 # Setup OpenSSH for debugging thru Azure Web App
 # https://docs.microsoft.com/en-us/azure/app-service/containers/app-service-linux-ssh-support#ssh-support-with-custom-docker-images
@@ -14,12 +15,13 @@ RUN \
   && apt-get update \
   && apt-get install -y --no-install-recommends openssh-server \
   && echo "$SSH_PASSWD" | chpasswd \
-  && mv /var/web/scripts/sshd_config /etc/ssh/ \
-  && mv /var/web/scripts/init.sh /usr/local/bin/ \
   && chmod u+x /usr/local/bin/init.sh
 
+ADD scripts/sshd_config /etc/ssh/
+ADD public /var/web/
+
 WORKDIR /var/web/
-RUN npm ci
+RUN npm install -g serve@11.1.0
 
 # Set up entrypoint
 ENTRYPOINT init.sh

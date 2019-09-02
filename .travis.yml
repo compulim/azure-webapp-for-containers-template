@@ -17,11 +17,13 @@ install:
 - docker build -t $DOCKER_FULL_IMAGE_NAME .
 
 script:
-- docker run -d --name test-image -p 80:80 --rm $DOCKER_FULL_IMAGE_NAME
+- docker run -d --env PORT=80 --name test-image -p 80:80 --rm $DOCKER_FULL_IMAGE_NAME
 - sleep 2 # We need to sleep 2 seconds because the web server did not listen yet
 - curl -f --retry 10 --retry-max-time 30 -vv http://localhost/health.txt
 - docker stop test-image
 
 deploy:
   provider: script
-  script: bash docker_push
+  on:
+    branch: master
+  script: bash scripts/docker_push

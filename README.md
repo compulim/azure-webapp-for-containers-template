@@ -2,7 +2,7 @@
 
 This repository is a template for setting up a simple web server on Azure Web App using Docker single image CI/CD from GitHub and Travis CI.
 
-We assume you have hands-on experience on these key technologies:
+We assume you have some experiences or understandings on these key technologies:
 
 - Microsoft Azure
    - Azure CLI
@@ -13,7 +13,15 @@ We assume you have hands-on experience on these key technologies:
 - GitHub
 - Travis CI
 
-This template will enable SSH access to the Docker image via Azure Web App (a.k.a. SCM or Kudu). The secure tunneling service is provided by Azure.
+## Why this template?
+
+If you have hands-on experience on the technologies above, you are probably doing something very similar to the steps we outlined here.
+
+This tutorial will save you time for building the CI/CD scripts.
+
+The CI/CD scripts outline here do not use Azure Container Registry webhooks feature, which would save you some costs and time testing it.
+
+Although this tutorial focus on Node.js, we are using it as a simple static web server. You are not required to run your app on Node.js stack.
 
 ## Setup
 
@@ -22,6 +30,7 @@ This template will enable SSH access to the Docker image via Azure Web App (a.k.
 1. Create a new GitHub repository based on this template
 1. Enable Travis CI on the GitHub repository
    - Set environment variable `DOCKER_IMAGE_NAME` to `myapp-image`
+   - Travis CI will also help you to verify the pull request
 
 ### Microsoft Azure
 
@@ -37,7 +46,7 @@ In this article, we will cover the setup using [Azure CLI](https://docs.microsof
 
 #### Create resource group
 
-Resource group groups all resources in a single place. We will walk you through one-by-one:
+Resource group groups all resources in a single place.
 
 ```sh
 az group create \
@@ -52,17 +61,19 @@ Azure Container Registry keeps your Docker images.
 ```sh
 az acr create \
   --resource-group myapp-rg \
-  --name myapp-acr \
+  --name myappacr \
   --admin-enabled \
   --location "West US" \
   --sku Basic
 ```
 
-> `--admin-enabled` turns on password-based access, which is required for Azure Web App.
+> `--admin-enabled` turns on password-based access, which is required for deploying to Azure Web App.
 
 After the registry is created, copy the name of the registry to Travis CI as environment variable named `ACR_NAME`.
 
 Also, save the `id` value. We will use it in "[Create service principal](#create-service-principal)" step.
+
+> If you lost the `id` value, you can run `az acr show --resource-group myapp-rg --name myappacr --query id --output tsv`.
 
 #### Create App Service Plan for Linux
 
@@ -93,61 +104,84 @@ az webapp create \
 
 After Azure Web App is created:
 
+1. Verify it is running at https://myapp.azurewebsites.net/
 1. Copy the name of the web app to Travis CI as environment variable named `AZURE_WEBAPP_NAME`
 1. Copy the resource group of the web app to Travis CI as environment variable named `AZURE_WEBAPP_RESOURCE_GROUP`
 
 Also, save the `id` value. We will use it in "[Create service principal](#create-service-principal)" step.
 
+> If you lost the `id` value, you can run `az webapp show --resource-group myapp-rg --name myapp --query id --output tsv`.
+
 #### Create service principal
 
-Service principal is the service account to access your resources. We will grant "Contributor" role to both Azure Container Registry (for reading admin password) and Azure Web App (for deployment).
+Service principal is the service account to access your resources, a.k.a. service account. We will grant "Contributor" role to both Azure Container Registry (for reading admin password) and Azure Web App (for deployment).
 
-> You will need to replace `scopes` with the `id` values from Azure Container Registry and Azure Web App.
+> We found it is more stable to create service principal without assignments first, then assign role to it.
 
 ```sh
-az ad sp create-for-rbac \
-  --role Contributor \
-  --scopes \
-    /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/apptemplate-rg/providers/Microsoft.ContainerRegistry/registries/apptemplateacr \
-    /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/apptemplate-rg/providers/Microsoft.Web/sites/apptemplateapp
+az ad sp create-for-rbac --name https://myapp --skip-assignment
 ```
 
-After service principal is created, copy these values to Travis CI environment variables
-   - Value of `appId` should be copied to `AZURE_SP_USERNAME`
-   - Value of `password` should be copied to `AZURE_SP_PASSWORD`
-   - Value of `tenant` should be copied to `AZURE_SP_TENANT`
+You should see the result similar to below.
+
+```json
+{
+  "appId": "12345678-1234-5678-abcd-12345678abcd",
+  "displayName": "azure-cli-2018-12-25-12-34-56",
+  "name": "https://myapp",
+  "password": "12345678-1234-5678-abcd-12345678abcd",
+  "tenant": "12345678-1234-5678-abcd-12345678abcd"
+}
+```
+
+You should copy these values to Travis CI environment variables;
+
+- Value of `appId` should be copied to `AZURE_SP_USERNAME`
+- Value of `password` should be copied to `AZURE_SP_PASSWORD`
+- Value of `tenant` should be copied to `AZURE_SP_TENANT`
+
+Then, add assign "Contributor" role of this service principal the resources. In the following script, you shoudl replace `--assignee` with the `appId`, and `--scope` with the two saved `id` from ACR and Azure Web App respectively.
+
+```sh
+az role assignment create \
+  --assignee 12345678-1234-5678-abcd-12345678abcd \
+  --role Contributor \
+  --scope /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/myapp-rg/providers/Microsoft.ContainerRegistry/registries/myappacr
+
+az role assignment create \
+  --assignee 12345678-1234-5678-abcd-12345678abcd \
+  --role Contributor \
+  --scope /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/myapp-rg/providers/Microsoft.Web/sites/myapp
+```
 
 ### Kick off the build
 
 Go to Travis CI of your repository, and then click "Trigger build". In about 2-3 minutes, you should see your website up and running.
 
-## How it works
+## How the CI/CD scripts works
 
-- GitHub repository
-   - Hosting web server using [`serve` package from NPM](https://www.npmjs.com/package/serve)
-   - Static content at `/public/`
-   - In `Dockerfile`, notably
-      - Copy repository to `/var/web/`
-      - Expose port 80 (web) and 2222 (SSH for Kudu)
-      - Install SSH
-      - Set entrypoint to `/usr/local/bin/init.sh`
-         - Start SSH server on port 2222
-         - Start the web server under `/var/web/` by calling `npm start`
-- Travis CI
-   - Build phase
-      1. Build the Docker image and tag it `myapp-acr.azurecr.io/myapp:a1b2c3d`
-         - The tag is based on Azure Container Registry name and Git commit SHA
-      1. Test the Docker image by running on port 5000 and pinging it by `curl http://localhost:5000/health.txt`
-   - Deployment phase
-      1. Deploy to Azure by the `docker_push` script
-         1. Log into Azure and Azure Container Registry
-         1. Push the Docker image to Azure Container Registry
-         1. Obtain Azure Container Registry credentials
-         1. Configure the container image on Azure Web App
-- Azure
-   - Azure Container Registry to store images
-   - Azure Web App for Containers for hosting Docker image
-       - No webhook is required because we explicitly set the Docker image name on every continuous deployment
+1. Build phase
+   1. Install AZ CLI
+   1. Build the `Dockerfile`
+      1. Expose port 80 and 2222 (SSH)
+      1. Copy selected files to `/var/web/`
+      1. Setup SSH according to [steps from this article](https://docs.microsoft.com/en-us/azure/app-service/containers/tutorial-custom-docker-image#enable-ssh-connections)
+      1. Set up working directory at `/var/web/`
+      1. Run `npm ci`
+      1. Set up entrypoint to `init.sh`
+   1. Test the image
+      1. Run the image and host on port 80
+      1. Ping http://localhost/health.txt
+      1. Stop the image
+   1. Tag the image like `myappacr.azurecr.io/myapp:a1b2c3d`
+1. Deployment phase
+   1. Note: deployment will only kickoff if it is a commit on `master` branch
+   1. Run `scripts/docker_push`
+      1. Login Azure by using Service Principal
+      1. Login Azure Container Registry (setup auth for Docker)
+      1. Push image to Azure Container Registry
+      1. Set Azure Web App to use the latest image
+         - Instead of using pricey Azure Container Registry webhooks, we prefer setting up the container directly using AZ CLI
 
 ## Frequently asked questions
 
@@ -157,7 +191,7 @@ You should have the following environment variables set in Travis CI:
 
 | Name                          | Description                       | Secured | Sample value                                   |
 |-------------------------------|-----------------------------------|---------|------------------------------------------------|
-| `ACR_NAME`                    | Azure Container Registry name     | No      | `myapp-acr`                                    |
+| `ACR_NAME`                    | Azure Container Registry name     | No      | `myappacr`                                    |
 | `AZURE_SP_PASSWORD`           | Service principal password        | Yes     |                                                |
 | `AZURE_SP_TENANT`             | Service principal tenant ID       | Yes     | GUID or `mycompany.onmicrosoft.com`            |
 | `AZURE_SP_USERNAME`           | Service principal username        | Yes     | GUID or `http://azure-cli-2019-01-01-12-34-56` |
@@ -170,6 +204,14 @@ You should have the following environment variables set in Travis CI:
 - For deployment log stream, https://myapp-web.scm.azurewebsites.net/api/logstream
 - For SSH access into the Docker container, https://myapp-web.scm.azurewebsites.net/webssh/host
 
+### Why enabling SSH? Is it secure?
+
+Enable SSH allows developers to easily diagnose issues inside the container.
+
+Although port 2222 is exposed as SSH server, this port is secured by Azure and is not publicly accessible. If you need to access the box through SSH, you will first need to be authenticated on Azure.
+
+[This article](https://docs.microsoft.com/en-us/azure/app-service/containers/tutorial-custom-docker-image#enable-ssh-connections) talk about SSH connections inside Docker image.
+
 ### How to rollback to previous image?
 
 Rollback is easy. We use Git commit when versioning Docker images. You will need to find out the commit you want to rollback to:
@@ -178,7 +220,85 @@ Rollback is easy. We use Git commit when versioning Docker images. You will need
 az webapp config container set \
   --resource-group myapp-rg \
   --name myapp-web \
-  --docker-custom-image-name myapp-acr.azurecr.io/myapp-image:a1b2c3d4e5f6
+  --docker-custom-image-name myappacr.azurecr.io/myapp-image:a1b2c3d4e5f6
 ```
 
 > Note: Git commit must be in long format.
+
+## What's next?
+
+### Deploy on Git tag
+
+Instead of deploying on commit to `master` branch, a more professional approach would be deploy on push to Git tag.
+
+```diff
+  deploy:
+    provider: script
+    on:
+-     branch: master
++     tags: true
+    script: bash scripts/docker_push
+```
+
+Your deployment workflow will become creating a tag and pushing it.
+
+```sh
+git tag v1.0.0
+git push -u origin v1.0.0
+```
+
+Optionally, you can add a GitHub Releases to automatically ZIP up your source code for archiving purpose.
+
+You can read more about this topic from [this Travis CI article](https://docs.travis-ci.com/user/deployment/npm/#what-to-release).
+
+## Adding a React app
+
+For React, we will separate the build and run by using multi-stage build. You can read [this article from Docker on multi-stage builds](https://docs.docker.com/develop/develop-images/multistage-build/).
+
+> The `Dockerfile` below assumes the build script for React is `npm run build` and output is located under `/build/` folder.
+
+```diff
++ FROM node:12 as builder
++
++ ADD src /var/build/
++ ADD package*.json /var/build/
++
++ WORKDIR /var/build/
++ RUN \
++   npm ci \
++   && npm run build
++
+  FROM node:12
+
+  EXPOSE 80 2222
+
+  ADD scripts/init.sh /usr/local/bin/
+
+  # Setup OpenSSH for debugging thru Azure Web App
+  # https://docs.microsoft.com/en-us/azure/app-service/containers/app-service-linux-ssh-support#ssh-support-with-custom-docker-images
+  # https://docs.microsoft.com/en-us/azure/app-service/containers/tutorial-custom-docker-image
+  ENV SSH_PASSWD "root:Docker!"
+  ENV SSH_PORT 2222
+  RUN \
+    apt-get update \
+    && apt-get install -y --no-install-recommends dialog \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends openssh-server \
+    && echo "$SSH_PASSWD" | chpasswd \
+    && chmod u+x /usr/local/bin/init.sh
+
+  ADD scripts/sshd_config /etc/ssh/
+- ADD public /var/web/public/
++ COPY --from=builder /var/build/build/ /var/web/
+
+  WORKDIR /var/web/
+  RUN npm install -g serve@11.1.0
+
+  # Set up entrypoint
+  ENTRYPOINT init.sh
+```
+
+## Related articles
+
+[Run a custom Linux container in Azure App Service]: https://docs.microsoft.com/en-us/azure/app-service/containers/quickstart-docker-go
+[Tutorial: Build a custom image and run in App Service from a private registry]: https://docs.microsoft.com/en-us/azure/app-service/containers/tutorial-custom-docker-image

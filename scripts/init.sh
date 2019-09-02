@@ -6,4 +6,4 @@ service ssh start
 
 # Start package
 cd /var/web/
-npm start
+npx --no-install serve
