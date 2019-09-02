@@ -267,7 +267,7 @@ az webapp config container set \
 
 When GitHub Actions roll out to the public, we will include GitHub Actions YAML file so you can build it on both GitHub and Travis CI.
 
-### How can I do XXX?
+### How can I do X?
 
 For questions, please [submit an issue](https://github.com/compulim/azure-webapp-for-containers-template/issues) to us. We will include the answer as part of this FAQs.
 
