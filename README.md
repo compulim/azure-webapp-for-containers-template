@@ -87,7 +87,7 @@ App Service Plan is the computational resources for your web app.
 
 ```sh
 az appservice plan create \
-  --resource-group myapp-rg
+  --resource-group myapp-rg \
   --name myapp-plan \
   --is-linux \
   --location "West US" \
@@ -135,8 +135,8 @@ You should see the result similar to below.
   "appId": "12345678-1234-5678-abcd-12345678abcd",
   "displayName": "azure-cli-2018-12-25-12-34-56",
   "name": "https://myapp-web",
-  "password": "12345678-1234-5678-abcd-12345678abcd",
-  "tenant": "12345678-1234-5678-abcd-12345678abcd"
+  "password": "1a2b3c4d-1a2b-3c4d-5e6f-1a2b3c4d5e6f",
+  "tenant": "87654321-4321-8765-dcba-dbca87654321"
 }
 ```
 
@@ -152,12 +152,12 @@ Then, add assign "Contributor" role of this service principal the resources. In 
 az role assignment create \
   --assignee 12345678-1234-5678-abcd-12345678abcd \
   --role Contributor \
-  --scope /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/myapp-rg/providers/Microsoft.ContainerRegistry/registries/myappacr
+  --scope /subscriptions/87654321-4321-8765-dcba-dbca87654321/resourceGroups/myapp-rg/providers/Microsoft.ContainerRegistry/registries/myappacr
 
 az role assignment create \
   --assignee 12345678-1234-5678-abcd-12345678abcd \
   --role Contributor \
-  --scope /subscriptions/12345678-1234-5678-abcd-12345678abcd/resourceGroups/myapp-rg/providers/Microsoft.Web/sites/myapp-web
+  --scope /subscriptions/87654321-4321-8765-dcba-dbca87654321/resourceGroups/myapp-rg/providers/Microsoft.Web/sites/myapp-web
 ```
 
 ### Kick off the build
