@@ -1,8 +1,10 @@
-# Azure Web App for Containers app with CI/CD
+# Azure Web App for Containers with Travis CI
 
-This repository is a template for setting up a simple web server on Azure Web App using Docker single image CI/CD from GitHub and Travis CI.
+> If you like this template, please [star us](https://github.com/compulim/azure-webapp-for-containers-template/stargazers).
 
-We assume you have some experiences or understandings on these key technologies:
+This repository is a template with best practices for setting up a simple web server on Azure Web App using Docker single image and continuously deployed using GitHub and Travis CI.
+
+We assume you have some understanding and experiences on these key technologies:
 
 - Microsoft Azure
    - Azure CLI
@@ -15,11 +17,17 @@ We assume you have some experiences or understandings on these key technologies:
 
 ## Why this template?
 
-If you have hands-on experience on the technologies above, you are probably doing something very similar to the steps we outlined here. This tutorial will save you time for building the CI/CD scripts.
+If you have hands-on experience on the technologies above, you are probably doing something very similar to the steps we outlined here. This tutorial will save you time for building your CI/CD scripts with best practices.
 
-The CI/CD scripts outline here do not use Azure Container Registry webhooks feature, which would save you some costs and time testing it.
+The CI/CD scripts outline here do not use Azure Container Registry webhooks feature, which would save you some time and costs.
 
 Although this tutorial focus on Node.js, we are using it as a simple static web server. You are not required to run your app on Node.js base image.
+
+## Why Docker?
+
+Docker is a great tool for modern app deployment.
+
+Developers can easily run a production server on their own box to verify the setup before rolling out. And the script-based approach make it easy to reproduce the image within minutes. This would greatly reduce development round-trip time and improve developer experience.
 
 ## Setup
 
@@ -44,7 +52,7 @@ In this article, we will cover the setup using [Azure CLI](https://docs.microsof
 
 #### Create resource group
 
-Resource group groups all resources in a single place.
+Resource group groups all resources in a single place. We prefer to keep all resources in a single resource group to ease maintenance.
 
 ```sh
 az group create \
@@ -162,8 +170,8 @@ Go to Travis CI of your repository, and then click "Trigger build". In about 2-3
    1. Install AZ CLI
    1. Build the `Dockerfile`
       1. Expose port 80 and 2222 (SSH)
-      1. Copy selected files to `/var/web/`
-      1. Setup SSH according to [steps from this article](https://docs.microsoft.com/en-us/azure/app-service/containers/tutorial-custom-docker-image#enable-ssh-connections)
+      1. Copy production files to `/var/web/`
+      1. Set up SSH according to steps from this [article on docs.microsoft.com](https://docs.microsoft.com/en-us/azure/app-service/containers/tutorial-custom-docker-image#enable-ssh-connections)
       1. Set up working directory at `/var/web/`
       1. Run `npm ci`
       1. Set up entrypoint to `init.sh`
@@ -180,6 +188,26 @@ Go to Travis CI of your repository, and then click "Trigger build". In about 2-3
       1. Push image to Azure Container Registry
       1. Set Azure Web App to use the latest image
          - Instead of using pricey Azure Container Registry webhooks, we prefer setting up the container directly using AZ CLI
+
+## Cleaning up
+
+If you no longer want to run this web app, run the following steps to remove it from your Azure subscription.
+
+### Delete the service principal
+
+This will delete the service principal used for deployment.
+
+```sh
+az ad sp delete --id 12345678-1234-5678-abcd-12345678abcd
+```
+
+### Delete the resource group
+
+This will delete your resource group, which contains Azure Container Registry, Azure App Service Plan for Linux, and Azure Web App for Containers.
+
+```sh
+az group delete --name myapp-rg
+```
 
 ## Frequently asked questions
 
@@ -223,6 +251,14 @@ az webapp config container set \
 
 > Note: Git commit must be in long format.
 
+### How about GitHub Actions?
+
+When GitHub Actions roll out to the public, we will include GitHub Actions YAML file so you can build it on both GitHub and Travis CI.
+
+### How can I do XXX?
+
+For questions, please [submit an issue](https://github.com/compulim/azure-webapp-for-containers-template/issues) to us. We will include the answer as part of this FAQs.
+
 ## What's next?
 
 ### Deploy on Git tag
@@ -251,7 +287,7 @@ You can read more about this topic from [this Travis CI article](https://docs.tr
 
 ## Adding a React app
 
-For React, we will separate the build and run by using multi-stage build. You can read [this article from Docker on multi-stage builds](https://docs.docker.com/develop/develop-images/multistage-build/).
+For React, we will separate the build and run by using multi-stage build. This will produce a very clean production image. You can read [this article from Docker on multi-stage builds](https://docs.docker.com/develop/develop-images/multistage-build/).
 
 > The `Dockerfile` below assumes the build script for React is `npm run build` and output is located under `/build/` folder.
 
